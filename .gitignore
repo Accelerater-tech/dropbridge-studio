@@ -1,0 +1,20 @@
+# 运行期产物：日志、截图、时间线、捕获包、接收到的文件
+data/
+*.log
+startup-err.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+dist-dbg/
+dist-portable/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DropBridge Studio</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="welcome" id="welcome" hidden>
+  <div class="welcome-card">
+    <h2>第一次用？三步就好</h2>
+    <p class="welcome-sub">这台电脑会变成一个 AirDrop 接收端，iPhone 能直接把文件投过来。</p>
+    <ol class="welcome-steps">
+      <li><b>插上网卡</b><span>RTL8821CU（已经配好 WinUSB 驱动的话，插上就行）</span></li>
+      <li><b>点「启动接收」</b><span>链路自检大约 40–70 秒，五个节点变绿就绪</span></li>
+      <li><b>iPhone 打开「隔空投送」</b><span>选这台电脑，文件会落到「传输」页</span></li>
+    </ol>
+    <div class="welcome-actions">
+      <button class="btn primary" id="btnWelcomeStart">启动接收</button>
+      <button class="btn ghost" id="btnWelcomeTest">先跑一次自测</button>
+      <button class="link" id="btnWelcomeClose">知道了，下次再说</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+
+  <aside class="rail">
+    <div class="rail-logo" title="DropBridge Studio">
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+        <defs>
+          <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#6ea8ff"/><stop offset="1" stop-color="#a06bff"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 19c4-7 8-7 12 0s8 7 12 0" fill="none" stroke="url(#g1)" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M4 12c4-7 8-7 12 0s8 7 12 0" fill="none" stroke="url(#g1)" stroke-width="2.6" stroke-linecap="round" opacity=".45"/>
+        <circle cx="16" cy="24.5" r="2.4" fill="#8fb6ff"/>
+      </svg>
+    </div>
+    <nav class="rail-nav">
+      <button class="rail-btn active" data-view="overview" title="概览">
+        <svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm9 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/></svg>
+        <span>概览</span>
+      </button>
+      <button class="rail-btn" data-view="transfers" title="传输记录">
+        <svg viewBox="0 0 24 24"><path d="M12 3v11m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>传输</span>
+      </button>
+      <button class="rail-btn" data-view="logs" title="实时日志">
+        <svg viewBox="0 0 24 24"><path d="M5 5h14v14H5z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>日志</span>
+      </button>
+      <button class="rail-btn" data-view="doctor" title="体检与诊断">
+        <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.4-7 10-7 10Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 12h2l1.2-2 1.6 4 1.2-2h2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>诊断</span>
+      </button>
+      <button class="rail-btn" data-view="settings" title="设置">
+        <svg viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l1.6-1.2-2-3.4-1.9.8a7.6 7.6 0 0 0-2.6-1.5L14.2 3h-4l-.3 2.2a7.6 7.6 0 0 0-2.6 1.5l-1.9-.8-2 3.4L5 10.5a7.7 7.7 0 0 0 0 3l-1.6 1.2 2 3.4 1.9-.8a7.6 7.6 0 0 0 2.6 1.5l.3 2.2h4l.3-2.2a7.6 7.6 0 0 0 2.6-1.5l1.9.8 2-3.4-1.6-1.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        <span>设置</span>
+      </button>
+    </nav>
+    <div class="rail-foot"><span id="railVersion">v1.0</span></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>DropBridge <em>Studio</em></h1>
+        <p id="topbarSub">让 Windows 直接接收 iPhone 的隔空投送</p>
+      </div>
+      <div class="topbar-right">
+        <div class="pill" id="statusPill" data-state="idle">
+          <i></i><span>未启动</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn ghost" id="btnRestart" title="重启驱动链路">
+            <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            重启
+          </button>
+          <button class="btn primary" id="btnStart">
+            <svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5-11-6.5Z"/></svg>
+            启动接收
+          </button>
+          <button class="btn danger" id="btnStop" hidden>
+            <svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.6"/></svg>
+            停止
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="scroll">
+      <!-- ============================ 概览 ============================ -->
+      <section class="view active" id="view-overview">
+        <div class="hero">
+          <div class="hero-left">
+            <div class="radar" id="radar">
+              <div class="radar-rings"><span></span><span></span><span></span></div>
+              <div class="radar-sweep"></div>
+              <div class="radar-core">
+                <svg viewBox="0 0 24 24" width="30" height="30"><path d="M12 3v11m0 0 4.2-4.2M12 14 7.8 9.8M4.5 16.5v2.2A2.3 2.3 0 0 0 6.8 21h10.4a2.3 2.3 0 0 0 2.3-2.3v-2.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+            </div>
+            <div class="hero-copy">
+              <div class="eyebrow" id="heroEyebrow">当前状态</div>
+              <h2 id="heroTitle">未启动</h2>
+              <p id="heroHint">点「启动接收」后，在 iPhone 上打开隔空投送，选中这台电脑即可发送。</p>
+              <div class="hero-tags">
+                <span class="tag" id="tagChannel">信道 149</span>
+                <span class="tag" id="tagName">DropBridge</span>
+                <span class="tag" id="tagAddr">AWDL —</span>
+                <span class="tag" id="tagBeacon" title="蓝牙信标：让 iPhone 更容易发现这台电脑">信标 —</span>
+              </div>
+            </div>
+          </div>
+          <div class="hero-right">
+            <div class="mini-stat">
+              <span class="mini-label">发现请求</span>
+              <strong id="statDiscover">0</strong>
+              <small>iPhone 找到本机</small>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-label">发送请求</span>
+              <strong id="statAsk">0</strong>
+              <small>开始协商传输</small>
+            </div>
+            <div class="mini-stat wide">
+              <span class="mini-label">最后事件</span>
+              <strong id="statLast" class="small">—</strong>
+              <small id="statLastTime">等待设备</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="cards">
+          <div class="card stat">
+            <div class="card-head"><span>实时速率</span><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 5-7 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="value"><span id="statFps">0</span><small>帧/秒</small></div>
+            <canvas id="spark" width="260" height="44"></canvas>
+          </div>
+          <div class="card stat">
+            <div class="card-head"><span>对端设备</span><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="value"><span id="statPeers">0</span><small>已同步</small></div>
+            <div class="sub" id="statMaster">同步主节点 —</div>
+          </div>
+          <div class="card stat">
+            <div class="card-head"><span>在线时长</span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+            <div class="value"><span id="statUptime">0:00</span></div>
+            <div class="sub" id="statRestarts">自动重启 0 次</div>
+          </div>
+          <div class="card stat">
+            <div class="card-head"><span>已接收</span><svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M4 7l2-3h12l2 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></div>
+            <div class="value"><span id="statFiles">0</span><small>个文件</small></div>
+            <div class="sub" id="statBytes">0 B</div>
+          </div>
+        </div>
+
+        <div class="chain-card">
+          <div class="section-head">
+            <h3>驱动链路</h3>
+            <span class="muted" id="chainMessage">等待启动</span>
+          </div>
+          <div class="chain" id="chain"></div>
+        </div>
+
+        <div class="section-head">
+          <h3>事件时间线</h3>
+          <span class="muted" id="eventHint">手机每次都留下痕迹</span>
+        </div>
+        <div class="timeline" id="timeline"><div class="empty">还没有事件</div></div>
+
+        <div class="section-head">
+          <h3>最近接收</h3>
+          <button class="link" id="btnOpenOutdir">打开接收文件夹</button>
+        </div>
+        <div class="list" id="recentList"><div class="empty">还没有收到文件</div></div>
+      </section>
+
+      <!-- ============================ 传输 ============================ -->
+      <section class="view" id="view-transfers">
+        <div class="section-head">
+          <h3>传输记录 <span class="count" id="transferCount">0</span></h3>
+          <div class="row-actions">
+            <input class="search" id="transferSearch" placeholder="搜索文件名…">
+            <button class="btn ghost sm" id="btnRefreshTransfers">刷新</button>
+            <button class="btn ghost sm" id="btnClearTransfers">清空列表</button>
+            <button class="btn ghost sm" id="btnOpenOutdir2">打开文件夹</button>
+          </div>
+        </div>
+        <div class="list big" id="transferList"><div class="empty">还没有收到文件</div></div>
+      </section>
+
+      <!-- ============================ 日志 ============================ -->
+      <section class="view" id="view-logs">
+        <div class="section-head">
+          <h3>实时日志</h3>
+          <div class="row-actions">
+            <div class="tabs" id="logTabs">
+              <button data-src="all" class="active">全部</button>
+              <button data-src="radio">radio</button>
+              <button data-src="bridge">bridge</button>
+              <button data-src="netd">netd</button>
+              <button data-src="awdld">awdld</button>
+              <button data-src="receiver">receiver</button>
+            </div>
+            <input class="search" id="logSearch" placeholder="过滤关键字…">
+            <label class="switch sm"><input type="checkbox" id="logPause"><i></i><span>暂停</span></label>
+          </div>
+        </div>
+        <div class="console" id="logConsole"></div>
+      </section>
+
+      <!-- ============================ 诊断 ============================ -->
+      <section class="view" id="view-doctor">
+        <div class="section-head">
+          <h3>一键体检</h3>
+          <div class="row-actions">
+            <button class="btn ghost sm" id="btnSelfTest">自测接收</button>
+            <button class="btn ghost sm" id="btnDoctor">重新检测</button>
+            <button class="btn ghost sm" id="btnCapture" title="把时间线、后端日志、体检结果打成一个压缩包">抓一次实测</button>
+            <button class="btn ghost sm" id="btnExportReport">导出诊断报告</button>
+          </div>
+        </div>
+        <div class="selftest" id="selfTestPanel" hidden></div>
+        <div class="guide" id="askGuide" hidden>
+          <h3>手机来过，但没进入协商（Discover 有、Ask 没有）</h3>
+          <ol>
+            <li>先看手机是不是 <b>iOS 18 以上</b>——旧协议实现与 18 的部分改动还没人验证过。</li>
+            <li>把 iPhone 的「隔空投送」临时改成 <b>所有人（10 分钟）</b>再试一次，这是最快的对照实验。</li>
+            <li>两台设备别离太远，中途别锁屏、别切后台；投送时保持 Studio 窗口开着。</li>
+            <li>还不行就点右边 <b>抓一次实测</b>，把生成的压缩包发给肥鱼。</li>
+          </ol>
+        </div>
+        <div class="checks" id="checks"><div class="empty">正在检测…</div></div>
+        <div class="section-head"><h3>运行环境</h3></div>
+        <div class="env-table" id="envTable"></div>
+      </section>
+
+      <!-- ============================ 设置 ============================ -->
+      <section class="view" id="view-settings">
+        <div class="section-head"><h3>接收设置</h3><span class="muted">保存后重启链路生效</span></div>
+        <div class="form-grid">
+          <label>电脑名称（iPhone 上显示）<input id="setName" maxlength="63"></label>
+          <label>设备型号<input id="setModel" maxlength="32"><small>影响 iPhone 显示与能力协商，如 MacBookPro18,3</small></label>
+          <label>信道<input id="setChannel" type="number" min="1" max="196"><small>5GHz 推荐 149，2.4GHz 用 6</small></label>
+          <label>带宽 (MHz)<input id="setWidth" type="number" min="20" max="80" step="20"></label>
+          <label>信道序列
+            <select id="setChanseq"><option value="social">social（推荐）</option><option value="fixed">fixed</option></select>
+          </label>
+          <label>能力标志<input id="setFlags"><small>AirDrop 能力位，默认 0x3fb</small></label>
+          <label class="span2">接收目录<div class="inline"><input id="setOutdir" readonly><button class="btn ghost sm" id="btnPickOutdir">选择</button></div></label>
+          <label class="span2">依赖后端目录<div class="inline"><input id="setRoot" readonly><button class="btn ghost sm" id="btnPickRoot">选择</button></div></label>
+        </div>
+        <div class="section-head"><h3>行为</h3></div>
+        <div class="toggles">
+          <label class="switch"><input type="checkbox" id="setBeacon"><i></i><span>蓝牙信标广播</span></label>
+          <label class="switch"><input type="checkbox" id="setAutoConnect"><i></i><span>启动时自动接收</span></label>
+          <label class="switch"><input type="checkbox" id="setAutoRestart"><i></i><span>后端异常自动重启</span></label>
+          <label class="switch"><input type="checkbox" id="setVerbose"><i></i><span>无线电详细日志</span></label>
+          <label class="switch"><input type="checkbox" id="setTray"><i></i><span>关闭窗口时留在托盘</span></label>
+          <label class="switch"><input type="checkbox" id="setAutostart"><i></i><span>开机自动启动</span></label>
+        </div>
+        <div class="form-foot">
+          <button class="btn primary" id="btnSaveSettings">保存设置</button>
+          <span class="muted" id="saveHint"></span>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+<script src="app.js"></script>
+</body>
+</html>
