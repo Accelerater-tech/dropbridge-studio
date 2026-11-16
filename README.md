@@ -19,6 +19,14 @@ DropBridgeStudio/
   Doctor.cmd      双击体检（命令行版，出问题先跑它）
 ```
 
+## 下载即用（免安装版）
+
+[**DropBridge-Studio-portable.zip**](https://github.com/Accelerater-tech/dropbridge-studio/releases/latest)
+—— 约 67 MB，解压到任意普通目录，双击 `启动 DropBridge Studio.cmd` 就能用。
+自带 CPython 3.12 与全部依赖，**不需要本机装过 Python**。
+
+想从源码跑、或者自己重新打包，看下一节。
+
 ## 免安装版（自带 Python 运行时）
 
 `python tools/make_portable.py` 会在桌面生成 **`DropBridge Studio\`** 目录（约 178 MB），
