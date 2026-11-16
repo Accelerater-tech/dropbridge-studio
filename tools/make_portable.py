@@ -102,6 +102,10 @@ def main() -> int:
         "exit /b 0\r\n",
         encoding="ascii",
     )
+    # 英文名启动脚本：有些解压工具不认 zip 里的 UTF-8 中文名，留个兜底
+    launcher_en = ROOT / "tools" / "launcher_en.cmd"
+    if launcher_en.is_file():
+        shutil.copy2(launcher_en, OUT / "Start DropBridge Studio.cmd")
     print("done ->", OUT)
     return 0
 

@@ -22,8 +22,9 @@ DropBridgeStudio/
 ## 下载即用（免安装版）
 
 [**DropBridge-Studio-portable.zip**](https://github.com/Accelerater-tech/dropbridge-studio/releases/latest)
-—— 约 67 MB，解压到任意普通目录，双击 `启动 DropBridge Studio.cmd` 就能用。
-自带 CPython 3.12 与全部依赖，**不需要本机装过 Python**。
+—— 约 67 MB，解压到任意普通目录，双击 `启动 DropBridge Studio.cmd`（或英文名的
+`Start DropBridge Studio.cmd`）就能用。自带 CPython 3.12 与全部依赖，
+**不需要本机装过 Python**。
 
 想从源码跑、或者自己重新打包，看下一节。
 
@@ -152,3 +153,23 @@ MI_00（蓝牙）不受影响。
 - 免安装版（自带 Python 3.12）：桌面目录启动 3 秒出窗口、63 秒五节点就绪、自启开关实测有效
 
 真机 iPhone 的最后一跳（Discover 之后没有 Ask）仍需要一台手机复现，见「常见问题」。
+
+## 发布脚本与 token 保管
+
+`tools/gh_release.py`（发 Release 资源）、`tools/gh_api_push.py`（整树提交）、
+`tools/gh_publish.py`（建仓库）都走 GitHub REST API —— 本机 `github.com` 的 git 传输不通，
+但 `api.github.com` / `uploads.github.com` 可达。
+
+token 不写在文件里，由 `tools/gh_auth.py` 用 **Windows DPAPI** 加密存在
+`%LOCALAPPDATA%\DropBridgeStudio\github.token`，只有当前 Windows 账户能解开；
+换台机器、换个账户拷过去都解不开。凭据取用顺序是：`GH_TOKEN` 环境变量 →
+加密存档 → 报错提示。
+
+```bash
+python tools/gh_auth.py save <token>   # 存一次
+python tools/gh_auth.py show           # 只看掩码
+python tools/gh_auth.py forget         # 删掉
+```
+
+仓库里不放任何 secret，`.gitignore` 也把 `data/`、日志、构建产物挡在外面。
+

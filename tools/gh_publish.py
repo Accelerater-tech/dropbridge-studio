@@ -89,7 +89,14 @@ def main() -> int:
 
     token = os.environ.get("GH_TOKEN", "").strip()
     if not token:
-        print("missing GH_TOKEN")
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        try:
+            import gh_auth
+            token = gh_auth.token()
+        except SystemExit:
+            token = ""
+    if not token:
+        print("missing GH_TOKEN (or run: python tools/gh_auth.py save <token>)")
         return 2
 
     root = Path(__file__).resolve().parent.parent
