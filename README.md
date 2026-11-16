@@ -19,14 +19,36 @@ DropBridgeStudio/
   Doctor.cmd      双击体检（命令行版，出问题先跑它）
 ```
 
-## 下载即用（免安装版）
+## 下载
 
-[**DropBridge-Studio-portable.zip**](https://github.com/Accelerater-tech/dropbridge-studio/releases/latest)
-—— 约 67 MB，解压到任意普通目录，双击 `启动 DropBridge Studio.cmd`（或英文名的
-`Start DropBridge Studio.cmd`）就能用。自带 CPython 3.12 与全部依赖，
-**不需要本机装过 Python**。
+两种装法，功能完全一致，任选一个：
 
-想从源码跑、或者自己重新打包，看下一节。
+**① 安装版（推荐）** —— [DropBridge-Studio-Setup-1.0.0.exe](https://github.com/Accelerater-tech/dropbridge-studio/releases/latest)
+（约 33 MB，双击安装）
+
+- **安装位置可以自己改**：默认 `%LOCALAPPDATA%\Programs\DropBridge Studio`，
+  界面上能直接编辑路径，或点「浏览…」选到 `D:\Apps\...` 之类的地方
+- 自动建桌面 + 开始菜单快捷方式
+- 控制面板「应用和功能」里能看到，卸载干净（目录、快捷方式、注册表一起清）
+- 自带 Python 运行时，不用本机装过 Python
+
+**② 免安装版** —— [DropBridge-Studio-portable.zip](https://github.com/Accelerater-tech/dropbridge-studio/releases/latest)
+（约 67 MB，解压即用）
+
+- 解压到任意普通目录，双击 `启动 DropBridge Studio.cmd`（或英文名 `Start DropBridge Studio.cmd`）
+- 适合放 U 盘带着走，或者不想在系统里留安装记录
+
+想从源码跑，看下一节。
+
+## 打包成 exe
+
+```bash
+python tools/build_exe.py      # 单文件主程序 → ~/dbstudio-build/dist/DropBridge Studio.exe
+python tools/build_setup.py    # 安装包 → ~/dbstudio-build/dist/DropBridge-Studio-Setup-1.0.0.exe
+```
+
+两个脚本都会自带冒烟测试（冷启动 → 等五节点就绪 → 截图）。
+注意构建与试跑都在家目录 `~/dbstudio-build/` 下做，别在 DSH 工作区里跑（见下面那条警告）。
 
 ## 免安装版（自带 Python 运行时）
 
