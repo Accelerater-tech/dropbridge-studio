@@ -105,6 +105,12 @@ class Api:
         snapshot["env"] = diag.environment(self.settings)
         snapshot["app"] = {"name": config.APP_NAME, "version": config.VERSION,
                            "root": self.settings.root, "outdir": str(self.settings.outdir)}
+        tray = getattr(self, "tray", None)
+        if tray is not None:
+            try:
+                snapshot["tray"] = {"running": tray.running()}
+            except Exception:
+                snapshot["tray"] = {"running": False}
         return snapshot
 
     def start(self) -> dict:

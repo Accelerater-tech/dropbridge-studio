@@ -12,9 +12,21 @@ from typing import Callable
 import pystray
 from PIL import Image
 
-from . import config
+from . import config, system
 
 REFRESH_SECONDS = 3.0
+
+
+def human_size(size) -> str:
+    try:
+        value = float(size or 0)
+    except (TypeError, ValueError):
+        value = 0.0
+    for unit in ("B", "KB", "MB", "GB"):
+        if value < 1024 or unit == "GB":
+            return f"{value:.0f} {unit}" if unit == "B" else f"{value:.1f} {unit}"
+        value /= 1024
+    return f"{value:.1f} GB"
 
 
 class Tray:
@@ -23,6 +35,9 @@ class Tray:
         self.window = window
         self._icon: pystray.Icon | None = None
         self._thread: threading.Thread | None = None
+        self._told_hidden = False
+        self._seen: set = set()
+        self._primed = False
 
     # ----- 数据 -----------------------------------------------------------
     def _image(self) -> Image.Image:
@@ -40,6 +55,10 @@ class Tray:
             "stopping": "正在停止",
             "error": "链路异常",
         }.get(phase, "未启动")
+        discovery = state.get("discovery") or {}
+        peers = discovery.get("awdl_peers") or 0
+        if phase == "ready" and peers:
+            text += f" · 对端 {peers}"
         return f"{config.APP_NAME} · {text}"
 
     # ----- 菜单动作 -------------------------------------------------------
@@ -68,9 +87,27 @@ class Tray:
         threading.Thread(target=self.api.stop, daemon=True).start()
 
     def _open_received(self, *_args) -> None:
-        from . import system
-
         system.open_path(self.api.settings.outdir)
+
+    def _toggle_autostart(self, *_args) -> None:
+        enabled = system.set_autostart(not system.autostart_enabled())
+        self.api.settings_update({"autostart": bool(enabled)})
+
+    # ----- 提示 -----------------------------------------------------------
+    def notify(self, title: str, message: str) -> None:
+        if not self._icon or not self.api.settings.get("notify", True):
+            return
+        try:
+            self._icon.notify(message, title)
+        except Exception:
+            pass
+
+    def hint_hidden_once(self) -> None:
+        """第一次关窗口时告诉用户：它没退出，在右下角。"""
+        if self._told_hidden:
+            return
+        self._told_hidden = True
+        self.notify(config.APP_NAME, "还在后台接收中，双击托盘图标可以打开窗口。")
 
     # ----- 生命周期 -------------------------------------------------------
     def start(self) -> None:
@@ -85,6 +122,12 @@ class Tray:
             pystray.MenuItem("停止接收", self._stop),
             pystray.MenuItem("打开接收文件夹", self._open_received),
             pystray.Menu.SEPARATOR,
+            pystray.MenuItem(
+                "开机自启",
+                self._toggle_autostart,
+                checked=lambda _item: system.autostart_enabled(),
+            ),
+            pystray.Menu.SEPARATOR,
             pystray.MenuItem("退出", self._quit),
         )
         self._icon = pystray.Icon(config.APP_ID, self._image(), config.APP_NAME, menu)
@@ -96,6 +139,29 @@ class Tray:
         while self._icon is not None:
             time.sleep(REFRESH_SECONDS)
             self.refresh()
+            self._watch_transfers()
+
+    def _watch_transfers(self) -> None:
+        """有文件落盘就弹一条气泡，窗口藏起来时也知道收到了什么。"""
+        try:
+            state = self.api.state()
+        except Exception:
+            return
+        rows = state.get("transfers") or []
+        # 只关心已经收完的，正在传输中的下一轮再说
+        done = {str(row.get("path")): row for row in rows
+                if str(row.get("status")) != "receiving"}
+        if not self._primed:
+            # 第一次只记下已有的，避免把历史文件当新文件
+            self._seen = set(done)
+            self._primed = True
+            return
+        for path, row in done.items():
+            if path in self._seen:
+                continue
+            name = row.get("name") or "文件"
+            self.notify("收到文件", f"{name} · {human_size(row.get('size') or 0)}")
+        self._seen |= set(done)
 
     def refresh(self) -> None:
         if self._icon is None:
@@ -104,6 +170,11 @@ class Tray:
             self._icon.title = self._title()
         except Exception:
             pass
+
+    def running(self) -> bool:
+        """托盘图标是否还活着（窗口藏起来时靠它确认程序没退出）。"""
+        thread = self._thread
+        return bool(self._icon is not None and thread is not None and thread.is_alive())
 
     def stop(self) -> None:
         if self._icon is not None:

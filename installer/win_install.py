@@ -27,7 +27,7 @@ from pathlib import Path
 APP_NAME = "DropBridge Studio"
 APP_EXE = "DropBridge Studio.exe"
 APP_ID = "DropBridgeStudio"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 PUBLISHER = "Tomorin"
 
 # 卸载脚本保持纯 ASCII：cmd 控制台代码页会把中文压成乱码，甚至影响命令解析

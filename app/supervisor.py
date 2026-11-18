@@ -23,7 +23,7 @@ from pathlib import Path
 
 import psutil
 
-from . import config
+from . import config, mdns_observe
 
 CHAIN = ("radio", "bridge", "netd", "awdld", "receiver")
 EVENTS_MAX = 240
@@ -285,6 +285,11 @@ class Chain:
         self.last_error = ""
         self.failed_logs: list = []
         self.run_dir: Path | None = None
+        # mDNS 旁听：苹果设备打开隔空投送时会发 _airdrop._tcp 查询，
+        # 记下来就能判断「对方到底有没有在找我们」。
+        self.mdns = mdns_observe.MdnsObserver()
+        self.mdns_active = False
+        self.last_ask: dict = {}
 
     # ------------------------------------------------------------------ state
     def snapshot(self) -> dict:
@@ -318,6 +323,7 @@ class Chain:
                 "ports": busy_ports(),
                 "address": self.radio_address,
                 "master": self.sync_master,
+                "discovery": self._discovery_state(),
                 "events": list(self.events),
                 "now": now,
             }
@@ -362,6 +368,35 @@ class Chain:
                     handle.write(json.dumps(item, ensure_ascii=False) + "\n")
             except OSError:
                 pass
+
+    def _discovery_state(self) -> dict:
+        """发现层体检：AWDL 对端、mDNS 查询、最近一次 Ask 的设备型号。
+
+        iPad「完全找不到这台电脑」时，三个数字能直接分清问题在哪一层：
+        peers>0 + 有查询 = 链路通、对方在找，看列表为什么不显示；
+        peers=0 = 连 AWDL 都没同步上；有查询但没 Ask = 对方找到了却没确认。
+        """
+        mdns = self.mdns.snapshot()
+        last = self.last_ask or {}
+        peers = int(self.stats.get("awdld", {}).get("peers", 0) or 0)
+        verdict = "未启动"
+        if self.phase == "ready":
+            if peers <= 0:
+                verdict = "await-peer"
+            elif mdns.get("total_queries", 0) <= 0:
+                verdict = "await-query"
+            elif not last:
+                verdict = "queried"
+            else:
+                verdict = "ok"
+        return {
+            "awdl_peers": peers,
+            "mdns": mdns,
+            "asks": int(self.stats.get("receiver", {}).get("asks", 0) or 0),
+            "discovers": int(self.stats.get("receiver", {}).get("discovers", 0) or 0),
+            "last_ask": last,
+            "verdict": verdict,
+        }
 
     def _beacon_state(self) -> dict:
         child = self.children.get("beacon")
@@ -428,6 +463,9 @@ class Chain:
             "--keys", str(s.keys),
             "--flags", str(s.get("flags")),
             "--max-receive-percent", str(s.get("max_receive_percent")),
+            # 让 receiver 连到旁听器，而不是直连 netd：旁听器原样转发，
+            # 只顺手记下有没有设备在查询 _airdrop._tcp（iPad 排查用）。
+            "--mdns-proxy-port", str(self.mdns.listen_port if self.mdns_active else 15353),
         ]
         if s.get("trace", True):
             # DEBUG 级握手日志：手机连上却没继续时会留下线索
@@ -502,6 +540,10 @@ class Chain:
                     pass
             self._stop_event = _Event()
             self._stop_event.reset()
+            # 旁听器要在 receiver 起来前就位（receiver 会连它的端口）
+            self.mdns_active = self.mdns.start()
+            if not self.mdns_active:
+                self._event("chain", "mDNS 旁听没起来，按直连模式启动")
             self._children_make = self._wire(self._make_children())
             self.children = self._children_make
             self.started_at = time.time()
@@ -657,6 +699,10 @@ class Chain:
         self._event("chain", "链路已停止")
 
     def _stop_children(self) -> None:
+        try:
+            self.mdns.stop()
+        finally:
+            self.mdns_active = False
         children = dict(self.children)
         for name in reversed(CHAIN):
             child = children.get(name)
@@ -776,6 +822,13 @@ class Chain:
                     stats["radio"]["peers"] = frames
                 except (IndexError, ValueError):
                     pass
+            if " peers " in text:
+                # awdld 的同步行：INFO : peers 1 | rx action ... | sync tree ...
+                try:
+                    peers = int(text.split(" peers ", 1)[1].split()[0])
+                    stats["awdld"]["peers"] = peers
+                except (IndexError, ValueError):
+                    pass
             if "AWDL address " in text:
                 addr = text.split("AWDL address ", 1)[1].split()[0].strip(",")
                 if len(addr) == 17:
@@ -803,6 +856,17 @@ class Chain:
                 # 手机先建 TLS 连接再发 Discover；只连不发也能看出来
                 peer = text.split("connection from ", 1)[1].strip()[:24]
                 self._note_receiver(f"手机连上来了 {peer}")
+            if "ask from " in text:
+                # ask from <名字> (<型号>): type ..., N item(s): ...
+                tail = text.split("ask from ", 1)[1]
+                name, _, rest = tail.partition(" (")
+                model, _, more = rest.partition(")")
+                self.last_ask = {
+                    "name": name.strip()[:48],
+                    "model": model.strip()[:32],
+                    "at": time.time(),
+                    "detail": more.lstrip(": ")[:120],
+                }
 
     def _note_receiver(self, what: str, kind: str = "peer") -> None:
         self.stats["receiver"]["last_event"] = what

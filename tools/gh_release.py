@@ -3,7 +3,7 @@
 为什么不用 git 提交：185 MB、上万个文件，Git Data API 要上千次请求；
 Release 资源单文件上限 2 GB，正合适。
 
-用法：GH_TOKEN=xxx python tools/gh_release.py [--dir "C:\\Users\\...\\DropBridge Studio"] [--tag v1.0.0]
+用法：GH_TOKEN=xxx python tools/gh_release.py [--dir "C:\\Users\\...\\DropBridge Studio"] [--tag v1.1.0]
 """
 from __future__ import annotations
 
@@ -89,7 +89,7 @@ BODY = """## 免安装版（Windows x64）
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir", default=str(Path.home() / "Desktop" / "DropBridge Studio"))
-    parser.add_argument("--tag", default="v1.0.0")
+    parser.add_argument("--tag", default="v1.1.0")
     parser.add_argument("--out", default=str(Path.home() / "dbstudio-build" / "DropBridge-Studio-portable.zip"))
     parser.add_argument("--skip-zip", action="store_true")
     parser.add_argument("--replace", action="store_true", help="同名资源已存在时删掉重传")

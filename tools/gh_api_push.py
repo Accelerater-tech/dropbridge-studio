@@ -71,6 +71,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", default="dropbridge-studio")
     parser.add_argument("--branch", default="main")
+    parser.add_argument("--message", default=MESSAGE, help="提交信息")
     parser.add_argument("--description", default="Windows 上接收 iPhone 隔空投送的图形界面控制台（DropBridge GUI）")
     args = parser.parse_args()
 
@@ -155,7 +156,7 @@ def main() -> int:
         parents = [ref["object"]["sha"]]
 
     payload = {
-        "message": MESSAGE,
+        "message": args.message,
         "tree": tree["sha"],
         "author": {"name": AUTHOR_NAME, "email": AUTHOR_EMAIL},
         "committer": {"name": AUTHOR_NAME, "email": AUTHOR_EMAIL},

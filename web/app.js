@@ -262,7 +262,10 @@
     renderChainState();
     renderTransfers();
     if (view === "settings" && !settingsLoaded) fillSettings();
-    if (view === "doctor" && doctorData) renderEnv(state.env);
+    if (view === "doctor" && doctorData) {
+      renderEnv(state.env);
+      renderDiscovery(state.discovery);
+    }
   }
 
   function renderStatus() {
@@ -555,6 +558,49 @@
       });
     });
     renderEnv(doctorData.env);
+    renderDiscovery(state && state.discovery);
+  }
+
+  function renderDiscovery(discovery) {
+    const box = $("#discoveryTable");
+    if (!box) return;
+    if (!discovery) {
+      box.innerHTML = `<div class="empty">链路没启动，暂时没有发现层数据</div>`;
+      return;
+    }
+    const mdns = discovery.mdns || {};
+    const peer = Number(discovery.awdl_peers || 0);
+    const queries = Number(mdns.total_queries || 0);
+    const verdict = discovery.verdict || "未启动";
+    const VERDICT = {
+      "未启动": ["链路没启动", "先点「启动接收」"],
+      "await-peer": ["等不到 AWDL 对端", "手机没和这台电脑同步上，先确认手机 AirDrop 已打开、屏幕别锁"],
+      "await-query": ["有对端，但没有设备来查询", "对方连上了却没开始找接收端，多半是它把 AirDrop 设成了「仅联系人」"],
+      "queried": ["有设备在查询了", "对方找到了但没走协商，看一眼最近的 Ask"],
+      "ok": ["发现层正常", "有设备查询并完成协商"],
+    };
+    const [title, advice] = VERDICT[verdict] || [verdict, ""];
+    const names = (mdns.names || [])
+      .map((item) => (typeof item === "string" ? esc(item) : `${esc(item.name)} ×${Number(item.count || 0)}`))
+      .join("<br>") || "—";
+    const lastAsk = discovery.last_ask && discovery.last_ask.name
+      ? `${esc(discovery.last_ask.name)}${discovery.last_ask.model ? ` · ${esc(discovery.last_ask.model)}` : ""}`
+      : "还没有设备确认过";
+    const recent = (mdns.recent || []).map((item) => {
+      const when = item.ago === undefined ? "" : `（${Number(item.ago).toFixed(0)}s 前）`;
+      return `${esc(item.type || "?")} ${esc(item.name || "")}${when}`;
+    }).join("<br>") || "—";
+    const rows = [
+      ["结论", `${esc(title)}${advice ? ` —— ${esc(advice)}` : ""}`],
+      ["AWDL 对端", peer > 0 ? `${peer} 个设备已同步` : "还没有设备同步上"],
+      ["mDNS 查询", queries > 0 ? `共 ${queries} 次（最近 1 分钟 ${Number(mdns.this_minute || 0)} 次）` : "一次都没收到"],
+      ["在找什么名字", names],
+      ["最近一条", recent],
+      ["最近 Ask", lastAsk],
+      ["旁听状态", mdns.error ? `异常：${esc(mdns.error)}` : `正常（监听 ${Number(mdns.port || 0)}，转发到 15353）`],
+    ];
+    box.innerHTML = rows.map(([key, value]) => `
+      <div class="env-row"><span>${esc(key)}</span><span>${value}</span></div>`).join("");
   }
 
   function renderEnv(env) {
@@ -588,7 +634,8 @@
     $("#setAutoConnect").checked = !!s.auto_connect;
     $("#setAutoRestart").checked = !!s.auto_restart;
     $("#setVerbose").checked = !!s.radio_verbose;
-    $("#setTray").checked = !!s.close_to_tray;
+    $("#setTray").checked = s.close_to_tray !== false;
+    $("#setMinimized").checked = !!s.start_minimized;
     settingsLoaded = true;
   }
 
@@ -607,6 +654,7 @@
       auto_restart: $("#setAutoRestart").checked,
       radio_verbose: $("#setVerbose").checked,
       close_to_tray: $("#setTray").checked,
+      start_minimized: $("#setMinimized").checked,
     };
     await api.settings_update(patch);
     settingsLoaded = false;

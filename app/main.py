@@ -26,6 +26,29 @@ def _single_instance() -> bool:
     return True
 
 
+def _trace(message: str) -> None:
+    """启动阶段排障用：写到临时目录，浏览器端看不见也能事后翻。"""
+    try:
+        path = Path(tempfile.gettempdir()) / "dropbridge-studio-startup.log"
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(f"{time.strftime('%H:%M:%S')} {message}\n")
+    except OSError:
+        pass
+
+
+def _activate_existing() -> bool:
+    """第二个实例起来时，把已经藏着的主窗口重新叫出来，而不是弹个框。"""
+    user32 = ctypes.windll.user32
+    for _ in range(20):
+        hwnd = user32.FindWindowW(None, config.APP_NAME)
+        if hwnd:
+            user32.ShowWindow(hwnd, 9)  # SW_RESTORE：从托盘藏起来的状态恢复
+            user32.SetForegroundWindow(hwnd)
+            return True
+        time.sleep(0.15)
+    return False
+
+
 def _report_startup_error(error: BaseException) -> None:
     try:
         path = Path(tempfile.gettempdir()) / "dropbridge-studio-error.log"
@@ -76,8 +99,9 @@ def main() -> int:
             page = arg.split("=", 1)[1]
 
     if not _single_instance():
-        ctypes.windll.user32.MessageBoxW(
-            None, "DropBridge Studio 已经在运行了。", config.APP_NAME, 0x40)
+        if not _activate_existing():
+            ctypes.windll.user32.MessageBoxW(
+                None, "DropBridge Studio 已经在运行了。", config.APP_NAME, 0x40)
         return 0
 
     if os.environ.get("STUDIO_DEBUG"):
@@ -92,6 +116,8 @@ def main() -> int:
         url += "#" + page
 
     storage = Path(tempfile.gettempdir()) / "dropbridge-studio-webview"
+    # 开机自启 + 「启动后最小化」：窗口一开始就别弹，等用户点托盘图标再出来
+    hidden_start = bool(api.settings.get("start_minimized"))
     window = webview.create_window(
         config.APP_NAME,
         url,
@@ -101,15 +127,18 @@ def main() -> int:
         min_size=(1060, 700),
         background_color="#080b11",
         text_select=False,
+        hidden=hidden_start,
     )
     api._window = window
     tray_holder: list = []
 
     def on_closing() -> bool:
-        # 设置里勾了「关闭时留在托盘」就只是藏起来，接收不断
+        # 默认像 QQ/微信：关窗口只是收起来，链路和托盘继续在。
+        # 真想退出，用托盘菜单的「退出」。
         if api.settings.get("close_to_tray") and tray_holder:
             try:
                 window.hide()
+                tray_holder[0].hint_hidden_once()
             except Exception:
                 pass
             return False
@@ -131,10 +160,17 @@ def main() -> int:
             tray = Tray(api, window)
             tray.start()
             tray_holder.append(tray)
+            api.tray = tray
         except Exception:
             _report_startup_error(sys.exc_info()[1])
         if api.settings.get("auto_connect"):
             threading.Thread(target=_auto_start, args=(api,), daemon=True).start()
+        if hidden_start and not tray_holder:
+            # 托盘起不来就不能藏着——否则用户永远找不到窗口
+            try:
+                window.show()
+            except Exception:  # noqa: BLE001
+                pass
 
     try:
         webview.start(on_start, debug=False, private_mode=False, storage_path=str(storage))

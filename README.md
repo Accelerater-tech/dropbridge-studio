@@ -23,7 +23,7 @@ DropBridgeStudio/
 
 两种装法，功能完全一致，任选一个：
 
-**① 安装版（推荐）** —— [DropBridge-Studio-Setup-1.0.0.exe](https://github.com/Accelerater-tech/dropbridge-studio/releases/latest)
+**① 安装版（推荐）** —— [DropBridge-Studio-Setup-1.1.0.exe](https://github.com/Accelerater-tech/dropbridge-studio/releases/latest)
 （约 33 MB，双击安装）
 
 - **安装位置可以自己改**：默认 `%LOCALAPPDATA%\Programs\DropBridge Studio`，
@@ -44,7 +44,7 @@ DropBridgeStudio/
 
 ```bash
 python tools/build_exe.py      # 单文件主程序 → ~/dbstudio-build/dist/DropBridge Studio.exe
-python tools/build_setup.py    # 安装包 → ~/dbstudio-build/dist/DropBridge-Studio-Setup-1.0.0.exe
+python tools/build_setup.py    # 安装包 → ~/dbstudio-build/dist/DropBridge-Studio-Setup-1.1.0.exe
 ```
 
 两个脚本都会自带冒烟测试（冷启动 → 等五节点就绪 → 截图）。
@@ -78,6 +78,8 @@ python tools/build_setup.py    # 安装包 → ~/dbstudio-build/dist/DropBridge-
 | 失败处理 | 放弃并停止 | 自动重启 + 前沿重启（管道丢失时重建 bridge/netd），带退避 |
 | 日志 | 目录里翻 txt | 界面内分进程查看、过滤、暂停，失败时保留最后 80 行 |
 | 诊断 | 无 | 9 项一键体检：安装目录、后端齐全、WinUSB 绑定、设备在位、端口占用、接收器 python、接收目录、密钥、蓝牙信标 |
+| 发现层 | 盲区 | 旁听 mDNS：AWDL 对端数、设备在查什么名字、最近一次 Ask，直接判断「对方根本没找到你」还是「找到了没协商」 |
+| 常驻 | 关窗口就退出 | 关窗口收进托盘，链路继续跑；再来一次双击自动把窗口叫回来 |
 | 驱动 | 手动 Zadig | 「修复驱动」按钮一键重新装 WinUSB（内置未损坏的 inf/cat/cer） |
 | 接收 | 只落盘 | 缩略图、大小、速率曲线、搜索、清空、打开文件夹 |
 | 可观测性 | 无 | 实时解析 radio/netd/awdld/receiver 每一行：帧率、对端数、AWDL 地址、发现/协商计数、信标状态 |
@@ -123,6 +125,20 @@ python -m app.cli hold               :: 起链路并常驻（给脚本/Scheduled
 `beacon` 打开；日志页的 beacon 页会显示广播状态。如果 beacon 一直失败，通常是临时目录
 写不进去——Studio 已经把 TEMP 指向 `<data>\studio\temp`，正常不会复现。
 
+另外先看「诊断」页的**发现层**卡片，它能区分三种情况：
+
+| 结论 | 含义 | 该干什么 |
+|---|---|---|
+| 等不到 AWDL 对端 | 手机没和这台电脑无线同步上 | 确认手机隔空投送已打开、屏幕别锁；电脑和手机靠近点 |
+| 一次 mDNS 查询都没收到 | 同步上了，但对方没找任何接收端 | 大概率对方 AirDrop 设成「仅限联系人」/关闭了 |
+| 已经查到本机 | 手机确实在列表里看到你 | 卡在协商阶段，看下面的「投送失败」 |
+
+**iPad / Mac 找不到这台电脑？** iPadOS / macOS 对「接收方是不是联系人」的校验比 iPhone 严格：
+我们拿不到 Apple 签发的 `ReceiverRecordData`，所以把对方的 AirDrop 设成「仅限联系人」时，
+iPad / Mac 会**完全不显示**这台电脑（连 Discover 都不会发）。把对方的 AirDrop 临时改成
+「所有人（10 分钟）」再试，是成本最低的对照实验。发现层里如果「mDNS 查询：一次都没收到」
+而「AWDL 对端」有数字，基本就是这个原因。
+
 **iPhone 显示"投送失败"？** 那是 iPhone 侧在拿到接收方身份后主动中止了会话：日志里能看到
 `POST /Discover` 200，但后面没有 `POST /Ask`。Studio 默认开启 `--trace`，会把每一步握手
 （TLS 版本、请求行、拒绝原因）写进 receiver 日志，右键「日志」页即可看到细节。
@@ -161,6 +177,24 @@ MI_00（蓝牙）不受影响。
 时间线只保留最近 240 条，但**会落盘**（`data\studio\timeline.jsonl`）：重启后会把你上次看到的
 历史事件读回来（显示得淡一些），所以关掉再开也不会丢「手机某次来过」的痕迹。
 
+## 更新日志
+
+**1.1.0（2026-11-19）**
+
+- **常驻**：关窗口默认收进托盘（不再退出），链路继续跑；托盘菜单可启动/停止接收、
+  打开接收文件夹、开机自启、退出；来文件弹气泡通知；托盘标题带当前对端数
+- **再双击唤回**：程序已在托盘时双击图标，会把主窗口还原到前台，不再提示"已经在运行"
+- **启动最小化**：设置里新增开关，开机自启时只在托盘里待着，不弹窗刷屏
+- **发现层（诊断页）**：旁听 receiver 与 netd 之间的 mDNS（只读转发，不影响接收），
+  显示 AWDL 对端数、对方在查什么名字、最近一次 Ask、以及一句话结论
+- **排障文档**：新增 iPad / Mac「完全找不到电脑」的判断方法与对照实验
+
+**1.0.0**
+
+- 五个后端按依赖顺序拉起、四重就绪判据、失败自动重启与前沿重启
+- 五节点链路图、实时速率曲线、日志分页、9 项一键体检、自测接收、抓一次实测
+- 安装版（可改路径、控制面板卸载）/ 免安装版（自带 Python 运行时）
+
 ## 已验证
 
 - 五节点链路自动拉起并就绪（radio 49876 / netd 49877 / receiver 8771 / bridge 命名管道）
@@ -171,6 +205,9 @@ MI_00（蓝牙）不受影响。
 - 「有 Discover 没 Ask」时诊断页自动弹出排查卡（用假发送端只发 Discover 验证）
 - 诊断报告带 `disk_logs`（6 个后端日志尾 400 行）+ `notable` 协议统计 + 传输记录
 - 关闭窗口到托盘（窗口隐藏、链路不断）、开机自启（Startup 快捷方式）实测生效
+- 再启动一次自动唤回托盘里的窗口（单实例 + 还原前台）
+- 启动最小化开关实测：窗口不出现、进程与托盘正常
+- mDNS 旁听实测：端口 15354 起来、查询/回应计数、转发不影响正常接收
 - 事件时间线落盘回放（重启后 `historic 6 / all 7`）、自动留证（Discover 后 20 秒出 zip，90 秒冷却）
 - 免安装版（自带 Python 3.12）：桌面目录启动 3 秒出窗口、63 秒五节点就绪、自启开关实测有效
 

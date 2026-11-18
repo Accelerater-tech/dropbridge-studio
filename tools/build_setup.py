@@ -1,7 +1,7 @@
 """把 installer/win_install.py + 单文件主程序打成 Setup.exe。
 
 依赖 tools/build_exe.py 先产出 <家里>/dbstudio-build/dist/DropBridge Studio.exe。
-产物：<家里>/dbstudio-build/dist/DropBridge-Studio-Setup-1.0.0.exe
+产物：<家里>/dbstudio-build/dist/DropBridge-Studio-Setup-1.1.0.exe
 
 用法：
   python tools/build_setup.py            # 构建 + 静默安装冒烟
@@ -22,7 +22,7 @@ BUILD_ROOT = Path.home() / "dbstudio-build"
 DIST = BUILD_ROOT / "dist"
 WORK = BUILD_ROOT / "setup-build"
 PAYLOAD = WORK / "payload"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 
 def prepare() -> None:

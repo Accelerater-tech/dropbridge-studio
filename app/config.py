@@ -13,7 +13,7 @@ from pathlib import Path
 
 APP_NAME = "DropBridge Studio"
 APP_ID = "DropBridgeStudio"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 # 打包成 exe 后资源在 PyInstaller 的解包目录里；源码运行时就是项目根。
 FROZEN = bool(getattr(sys, "frozen", False))
@@ -49,7 +49,8 @@ DEFAULTS = {
     "notify": True,
     "radio_verbose": False,
     "trace": True,
-    "close_to_tray": False,
+    "close_to_tray": True,
+    "start_minimized": False,
     "max_receive_percent": 30,
 }
 

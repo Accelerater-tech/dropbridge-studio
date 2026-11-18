@@ -14,12 +14,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 from gh_release import OWNER, REPO, api, upload_asset  # noqa: E402
 
-TAG = "v1.0.0"
+TAG = "v1.1.0"
 BODY = """## 两种装法，任选一个
 
 ### 1. 安装版（推荐）
 
-下载 `DropBridge-Studio-Setup-1.0.0.exe`（约 33 MB），双击安装：
+下载 `DropBridge-Studio-Setup-1.1.0.exe`（约 33 MB），双击安装：
 
 - **安装位置可以自己改**（默认 `%LOCALAPPDATA%\\Programs\\DropBridge Studio`，也能指到 `D:\\Apps\\...`）
 - 自动建桌面 + 开始菜单快捷方式
@@ -44,7 +44,7 @@ BODY = """## 两种装法，任选一个
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--file", default=str(Path.home() / "dbstudio-build" / "dist" / "DropBridge-Studio-Setup-1.0.0.exe"))
+    parser.add_argument("--file", default=str(Path.home() / "dbstudio-build" / "dist" / "DropBridge-Studio-Setup-1.1.0.exe"))
     parser.add_argument("--replace", action="store_true")
     args = parser.parse_args()
 
