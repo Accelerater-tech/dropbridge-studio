@@ -13,7 +13,7 @@ from pathlib import Path
 
 APP_NAME = "DropBridge Studio"
 APP_ID = "DropBridgeStudio"
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 # 打包成 exe 后资源在 PyInstaller 的解包目录里；源码运行时就是项目根。
 FROZEN = bool(getattr(sys, "frozen", False))
@@ -51,6 +51,9 @@ DEFAULTS = {
     "trace": True,
     "close_to_tray": True,
     "start_minimized": False,
+    # 发现层统计（mDNS 旁听）：默认关——它会多一道 UDP 转发，转发出问题时
+    # 苹果设备会彻底找不到本机，所以只当作排障开关，按需打开。
+    "mdns_observe": False,
     "max_receive_percent": 30,
 }
 

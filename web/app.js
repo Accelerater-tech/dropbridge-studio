@@ -580,6 +580,17 @@
       "ok": ["发现层正常", "有设备查询并完成协商"],
     };
     const [title, advice] = VERDICT[verdict] || [verdict, ""];
+    if (mdns.listening === false) {
+      // 旁听关掉时没有查询计数，不能把它当成「没有设备在找我们」。
+      box.innerHTML = [
+        ["结论", peer > 0 ? `${peer} 个设备已同步（旁听统计未启用）` : "链路就绪，等设备出现"],
+        ["AWDL 对端", peer > 0 ? `${peer} 个设备已同步` : "还没有设备同步上"],
+        ["mDNS 查询", "旁听未启用，不计数（不影响接收）"],
+        ["怎么开", "设置里打开「发现层统计」后重启链路；排障用，平时保持关闭"],
+      ].map(([key, value]) => `
+      <div class="env-row"><span>${esc(key)}</span><span>${value}</span></div>`).join("");
+      return;
+    }
     const names = (mdns.names || [])
       .map((item) => (typeof item === "string" ? esc(item) : `${esc(item.name)} ×${Number(item.count || 0)}`))
       .join("<br>") || "—";
@@ -605,6 +616,8 @@
 
   function renderEnv(env) {
     if (!env) return;
+    const rail = $("#railVersion");
+    if (rail && env.app) rail.textContent = `v${env.app}`;
     const rows = [
       ["应用版本", `DropBridge Studio ${env.app}`],
       ["后端版本", env.backend_version || "—"],
@@ -636,6 +649,8 @@
     $("#setVerbose").checked = !!s.radio_verbose;
     $("#setTray").checked = s.close_to_tray !== false;
     $("#setMinimized").checked = !!s.start_minimized;
+    $("#setObserve").checked = !!s.mdns_observe;
+    $("#setObserve").checked = !!s.mdns_observe;
     settingsLoaded = true;
   }
 
@@ -655,6 +670,8 @@
       radio_verbose: $("#setVerbose").checked,
       close_to_tray: $("#setTray").checked,
       start_minimized: $("#setMinimized").checked,
+      mdns_observe: $("#setObserve").checked,
+      mdns_observe: $("#setObserve").checked,
     };
     await api.settings_update(patch);
     settingsLoaded = false;

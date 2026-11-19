@@ -89,7 +89,7 @@ BODY = """## 免安装版（Windows x64）
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir", default=str(Path.home() / "Desktop" / "DropBridge Studio"))
-    parser.add_argument("--tag", default="v1.1.0")
+    parser.add_argument("--tag", default="v1.1.1")
     parser.add_argument("--out", default=str(Path.home() / "dbstudio-build" / "DropBridge-Studio-portable.zip"))
     parser.add_argument("--skip-zip", action="store_true")
     parser.add_argument("--replace", action="store_true", help="同名资源已存在时删掉重传")

@@ -540,9 +540,12 @@ class Chain:
                     pass
             self._stop_event = _Event()
             self._stop_event.reset()
-            # 旁听器要在 receiver 起来前就位（receiver 会连它的端口）
-            self.mdns_active = self.mdns.start()
-            if not self.mdns_active:
+            # 旁听器要在 receiver 起来前就位（receiver 会连它的端口）。
+            # 默认不开：抓包旁听一旦转发不对，苹果设备就完全发现不了本机，
+            # 所以发现层统计改成显式开关（设置里打开才启用）。
+            observe = bool(self.settings.get("mdns_observe", False))
+            self.mdns_active = observe and self.mdns.start()
+            if observe and not self.mdns_active:
                 self._event("chain", "mDNS 旁听没起来，按直连模式启动")
             self._children_make = self._wire(self._make_children())
             self.children = self._children_make
